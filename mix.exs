@@ -26,7 +26,7 @@ defmodule DukascopyEx.MixProject do
     [
       tidewave:
         "run --no-halt -e 'Agent.start(fn -> Bandit.start_link(plug: Tidewave, port: 4000) end)'",
-      ci: ["format", "credo", "test"]
+      ci: ["format", "credo", "test --include network"]
     ]
   end
 

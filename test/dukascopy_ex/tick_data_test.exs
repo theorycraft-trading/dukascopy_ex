@@ -4,6 +4,8 @@ defmodule DukascopyEx.TickDataTest do
   alias DukascopyEx.TickData
   alias TheoryCraft.MarketSource.Tick
 
+  ## Tests
+
   doctest DukascopyEx.TickData
 
   describe "fetch/4" do
@@ -14,21 +16,28 @@ defmodule DukascopyEx.TickDataTest do
 
     @tag :network
     test "fetches tick data for EUR/USD" do
-      assert {:ok, ticks} = TickData.fetch("EUR/USD", ~D[2024-11-15], 10)
+      date = ~D[2024-11-15]
+      hour = 10
 
+      assert {:ok, ticks} = TickData.fetch("EUR/USD", date, hour)
       assert length(ticks) > 0
+
       assert %Tick{time: time, ask: ask, bid: bid} = hd(ticks)
-      assert %DateTime{} = time
+      assert %DateTime{year: 2024, month: 11, day: 15, hour: 10} = time
       assert is_float(ask)
       assert is_float(bid)
     end
 
     @tag :network
     test "fetches tick data for stocks" do
-      {:ok, ticks} = TickData.fetch("AAPL.US/USD", ~D[2024-11-15], 14)
+      date = ~D[2024-11-15]
+      hour = 14
 
+      assert {:ok, ticks} = TickData.fetch("AAPL.US/USD", date, hour)
       assert length(ticks) > 0
-      assert %Tick{} = hd(ticks)
+
+      assert %Tick{time: time} = hd(ticks)
+      assert %DateTime{year: 2024, month: 11, day: 15, hour: 14} = time
     end
   end
 

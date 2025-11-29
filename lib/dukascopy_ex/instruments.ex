@@ -271,4 +271,46 @@ defmodule DukascopyEx.Instruments do
     get_pip_value(instrument_name) ||
       raise ArgumentError, "unknown instrument: #{instrument_name}"
   end
+
+  ## Point value lookup
+
+  # Some instruments have special point_value overrides (from dukascopy-node)
+  @point_value_overrides %{
+    "BAT/USD" => 100_000,
+    "UNI/USD" => 1_000,
+    "LNK/USD" => 1_000
+  }
+
+  @doc """
+  Returns the point value for a given instrument.
+
+  The point value is used to convert integer prices from Dukascopy's binary format
+  to decimal prices.
+
+  ## Options
+
+    * `:point_value` - Override the point value (bypasses all lookups)
+
+  ## Examples
+
+      iex> Instruments.get_point_value("EUR/USD")
+      {:ok, 100000.0}
+      iex> Instruments.get_point_value("USD/JPY")
+      {:ok, 1000.0}
+      iex> Instruments.get_point_value("EUR/USD", point_value: 50000)
+      {:ok, 50000}
+      iex> Instruments.get_point_value("UNKNOWN")
+      {:error, {:unknown_instrument, "UNKNOWN"}}
+
+  """
+  @spec get_point_value(String.t(), Keyword.t()) :: {:ok, number()} | {:error, term()}
+  def get_point_value(instrument, opts \\ []) do
+    with :error <- Keyword.fetch(opts, :point_value),
+         :error <- Map.fetch(@point_value_overrides, instrument) do
+      case get_pip_value(instrument) do
+        nil -> {:error, {:unknown_instrument, instrument}}
+        pip_value -> {:ok, 10 / pip_value}
+      end
+    end
+  end
 end
