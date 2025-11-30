@@ -40,6 +40,7 @@ defmodule DukascopyEx.MixProject do
       {:theory_craft, github: "theorycraft-trading/theory_craft"},
       {:req, "~> 0.5"},
       {:lzma, "~> 0.1"},
+      {:simple_enum, "~> 0.1"},
 
       ## Dev/Test
       {:tidewave, "~> 0.5", only: :dev},

@@ -3,6 +3,8 @@ defmodule DukascopyEx.Options do
 
   # Validates and normalizes options for `DukascopyEx.stream/3`.
 
+  require DukascopyEx.Enums, as: Enums
+
   alias DukascopyEx.Instruments
   alias TheoryCraft.TimeFrame
 
@@ -164,15 +166,15 @@ defmodule DukascopyEx.Options do
 
   defp extract_price_type(opts) do
     case Keyword.get(opts, :price_type) do
-      pt when pt in [:bid, :ask, :mid] -> {:ok, pt}
-      pt -> {:error, {:invalid_price_type, pt}}
+      value when value in Enums.price_type(:__keys__) -> {:ok, value}
+      value -> {:error, {:invalid_price_type, value}}
     end
   end
 
   defp extract_volume_units(opts) do
     case Keyword.get(opts, :volume_units) do
-      vu when vu in [:millions, :thousands, :units] -> {:ok, vu}
-      vu -> {:error, {:invalid_volume_units, vu}}
+      value when value in Enums.volume_units(:__keys__) -> {:ok, value}
+      value -> {:error, {:invalid_volume_units, value}}
     end
   end
 
@@ -185,11 +187,8 @@ defmodule DukascopyEx.Options do
 
   defp extract_weekly_open(opts) do
     case Keyword.get(opts, :weekly_open) do
-      day when day in [:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday] ->
-        {:ok, day}
-
-      day ->
-        {:error, {:invalid_weekly_open, day}}
+      value when value in Enums.weekly_open(:__keys__) -> {:ok, value}
+      value -> {:error, {:invalid_weekly_open, value}}
     end
   end
 
