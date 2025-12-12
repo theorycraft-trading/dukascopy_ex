@@ -137,42 +137,33 @@ defmodule DukascopyEx.DataFeed do
   # Generate periods for bar data
   defp generate_bar_periods(:minute, from, to) do
     # One file per day
-    from_date = DateTime.to_date(from)
-    to_date = DateTime.to_date(to)
+    start = %DateTime{from | hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
 
-    Stream.unfold(from_date, fn current ->
-      if Date.compare(current, to_date) != :gt do
-        {current, Date.add(current, 1)}
-      else
-        nil
+    Stream.unfold(start, fn current ->
+      if DateTime.compare(current, to) == :lt do
+        {DateTime.to_date(current), DateTime.add(current, 1, :day)}
       end
     end)
   end
 
   defp generate_bar_periods(:hour, from, to) do
     # One file per month
-    from_month = {from.year, from.month}
-    to_month = {to.year, to.month}
+    start = %DateTime{from | day: 1, hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
 
-    Stream.unfold(from_month, fn {year, month} = current ->
-      if compare_months(current, to_month) != :gt do
-        date = Date.new!(year, month, 1)
-        next = next_month(year, month)
-        {date, next}
-      else
-        nil
+    Stream.unfold(start, fn current ->
+      if DateTime.compare(current, to) == :lt do
+        {DateTime.to_date(current), DateTime.shift(current, month: 1)}
       end
     end)
   end
 
   defp generate_bar_periods(:day, from, to) do
     # One file per year
-    Stream.unfold(from.year, fn year ->
-      if year <= to.year do
-        date = Date.new!(year, 1, 1)
-        {date, year + 1}
-      else
-        nil
+    start = %DateTime{from | month: 1, day: 1, hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
+
+    Stream.unfold(start, fn current ->
+      if DateTime.compare(current, to) == :lt do
+        {DateTime.to_date(current), DateTime.shift(current, year: 1)}
       end
     end)
   end
@@ -228,23 +219,6 @@ defmodule DukascopyEx.DataFeed do
     case data do
       %{time: time} -> DateTime.compare(time, from) != :lt and DateTime.compare(time, to) == :lt
       _ -> true
-    end
-  end
-
-  defp compare_months({y1, m1}, {y2, m2}) do
-    cond do
-      y1 < y2 -> :lt
-      y1 > y2 -> :gt
-      m1 < m2 -> :lt
-      m1 > m2 -> :gt
-      true -> :eq
-    end
-  end
-
-  defp next_month(year, month) do
-    case month do
-      12 -> {year + 1, 1}
-      _ -> {year, month + 1}
     end
   end
 end

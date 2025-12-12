@@ -280,4 +280,75 @@ defmodule DukascopyEx.DataFeedTest do
       end
     end
   end
+
+  ## Period generation tests
+
+  describe "stream/1 period generation" do
+    test "fetches exactly 1 file for a 1-day minute bar range" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:period_test_m1)
+
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :minute,
+          from: ~D[2019-01-04],
+          to: ~D[2019-01-05]
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch exactly 1 file (Jan 4), not Jan 5
+      # (to: Jan 5 00:00:00 means we don't need Jan 5's file)
+      assert length(paths) == 1
+      assert Enum.any?(paths, &String.contains?(&1, "2019/00/04"))
+      refute Enum.any?(paths, &String.contains?(&1, "2019/00/05"))
+    end
+
+    test "fetches exactly 1 file for a 1-month hourly bar range" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:period_test_h1)
+
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :hour,
+          from: ~D[2019-01-01],
+          to: ~D[2019-01-31]
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch exactly 1 file (January), not February
+      assert length(paths) == 1
+      assert Enum.any?(paths, &String.contains?(&1, "2019/00"))
+      refute Enum.any?(paths, &String.contains?(&1, "2019/01"))
+    end
+
+    test "fetches exactly 1 file for a 1-year daily bar range" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:period_test_d1)
+
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :day,
+          from: ~D[2019-01-01],
+          to: ~D[2019-12-31]
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch exactly 1 file (2019), not 2020
+      assert length(paths) == 1
+      assert Enum.any?(paths, &String.contains?(&1, "2019"))
+      refute Enum.any?(paths, &String.contains?(&1, "2020"))
+    end
+  end
 end
