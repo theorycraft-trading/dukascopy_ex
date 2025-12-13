@@ -16,6 +16,7 @@ defmodule Mix.Tasks.Dukascopy.Gen.Instruments do
 
   @dukascopy_api_url "https://freeserv.dukascopy.com/2.0/index.php?path=common%2Finstruments&jsonp=_callbacks_._2n9mtpe0f"
 
+  @impl Mix.Task
   def run(_args) do
     Mix.Task.run("app.start")
 

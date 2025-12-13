@@ -143,7 +143,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "m5", opts) |> Enum.to_list()
 
-      assert length(bars) == 287
+      assert length(bars) == 288
       assert_uniform_spacing bars, :timer.minutes(5)
     end
 
@@ -154,7 +154,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "m5", opts) |> Enum.to_list()
 
-      assert length(bars) == 287
+      assert length(bars) == 288
 
       Enum.each(bars, fn bar ->
         assert bar.high >= bar.low
@@ -188,7 +188,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "h4", opts) |> Enum.to_list()
 
-      assert length(bars) == 11
+      assert length(bars) == 12
       assert_uniform_spacing bars, :timer.hours(4)
     end
   end
@@ -294,7 +294,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "m5", opts) |> Enum.to_list()
 
-      assert length(bars) == 11
+      assert length(bars) == 12
       assert_uniform_spacing bars, :timer.minutes(5)
     end
   end
@@ -354,7 +354,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "m5", opts) |> Enum.to_list()
 
-      assert length(bars) == 287
+      assert length(bars) == 288
       assert Enum.all?(bars, & &1.new_bar?)
     end
 
@@ -383,7 +383,7 @@ defmodule DukascopyExTest do
 
       bars = DukascopyEx.stream("EUR/USD", "h4", opts) |> Enum.to_list()
 
-      assert length(bars) == 5
+      assert length(bars) == 6
       assert_uniform_spacing bars, :timer.hours(4)
     end
   end

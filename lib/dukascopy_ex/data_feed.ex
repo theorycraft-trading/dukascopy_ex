@@ -65,6 +65,7 @@ defmodule DukascopyEx.DataFeed do
   require Logger
 
   alias DukascopyEx.{BarData, Options, TickData}
+  alias DukascopyEx.Helpers.PeriodGenerator
 
   ## Public API
 
@@ -90,7 +91,7 @@ defmodule DukascopyEx.DataFeed do
     pause_ms = Keyword.fetch!(opts, :pause_between_batches_ms)
 
     from
-    |> generate_tick_periods(to)
+    |> PeriodGenerator.tick_periods(to)
     |> batch_fetch(batch_size, pause_ms, opts, fn {date, hour} ->
       TickData.fetch!(instrument, date, hour, opts)
     end)
@@ -112,60 +113,12 @@ defmodule DukascopyEx.DataFeed do
       end
 
     granularity
-    |> generate_bar_periods(from, to)
-    |> batch_fetch(effective_batch_size, pause_ms, opts, fn period ->
-      BarData.fetch!(instrument, granularity, period, opts)
+    |> PeriodGenerator.bar_periods(from, to)
+    |> batch_fetch(effective_batch_size, pause_ms, opts, fn {fetch_granularity, period} ->
+      # fetch_granularity may differ from requested granularity due to current period fallback
+      BarData.fetch!(instrument, fetch_granularity, period, opts)
     end)
     |> Stream.filter(&in_date_range?(&1, from, to))
-  end
-
-  ## Private functions - Period generation
-
-  # Generate periods for tick data (one per hour)
-  defp generate_tick_periods(from, to) do
-    from = truncate_to_hour(from)
-
-    Stream.unfold(from, fn current ->
-      if DateTime.compare(current, to) == :lt do
-        {{DateTime.to_date(current), current.hour}, DateTime.add(current, 1, :hour)}
-      else
-        nil
-      end
-    end)
-  end
-
-  # Generate periods for bar data
-  defp generate_bar_periods(:minute, from, to) do
-    # One file per day
-    start = %DateTime{from | hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
-
-    Stream.unfold(start, fn current ->
-      if DateTime.compare(current, to) == :lt do
-        {DateTime.to_date(current), DateTime.add(current, 1, :day)}
-      end
-    end)
-  end
-
-  defp generate_bar_periods(:hour, from, to) do
-    # One file per month
-    start = %DateTime{from | day: 1, hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
-
-    Stream.unfold(start, fn current ->
-      if DateTime.compare(current, to) == :lt do
-        {DateTime.to_date(current), DateTime.shift(current, month: 1)}
-      end
-    end)
-  end
-
-  defp generate_bar_periods(:day, from, to) do
-    # One file per year
-    start = %DateTime{from | month: 1, day: 1, hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
-
-    Stream.unfold(start, fn current ->
-      if DateTime.compare(current, to) == :lt do
-        {DateTime.to_date(current), DateTime.shift(current, year: 1)}
-      end
-    end)
   end
 
   ## Private functions - Batch fetching
@@ -210,10 +163,6 @@ defmodule DukascopyEx.DataFeed do
   end
 
   ## Private functions - Helpers
-
-  defp truncate_to_hour(%DateTime{} = dt) do
-    %DateTime{dt | minute: 0, second: 0, microsecond: {0, 0}}
-  end
 
   defp in_date_range?(data, from, to) do
     case data do

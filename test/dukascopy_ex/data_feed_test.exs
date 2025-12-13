@@ -351,4 +351,114 @@ defmodule DukascopyEx.DataFeedTest do
       refute Enum.any?(paths, &String.contains?(&1, "2020"))
     end
   end
+
+  describe "stream/1 current period fallback" do
+    test "fetches minute files for hourly data in current month" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:fallback_h1_current_month)
+
+      # Use current month dates
+      now = DateTime.utc_now()
+      from = Date.new!(now.year, now.month, 1)
+      to = Date.new!(now.year, now.month, min(now.day, 2))
+
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :hour,
+          from: from,
+          to: to
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch minute files (candles_min_1), not hourly files (candles_hour_1)
+      # because current month's hourly file doesn't exist yet
+      assert length(paths) > 0
+      assert Enum.all?(paths, &String.contains?(&1, "candles_min_1"))
+      refute Enum.any?(paths, &String.contains?(&1, "candles_hour_1"))
+    end
+
+    test "fetches hourly file for hourly data in past month" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:fallback_h1_past_month)
+
+      # Use past month dates (November 2019)
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :hour,
+          from: ~D[2019-11-01],
+          to: ~D[2019-11-30]
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch hourly file, not minute files
+      assert length(paths) == 1
+      assert Enum.all?(paths, &String.contains?(&1, "candles_hour_1"))
+    end
+
+    test "fetches hourly files for daily data in current year" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:fallback_d1_current_year)
+
+      # Use current year dates (but past months to avoid double fallback)
+      now = DateTime.utc_now()
+      from = Date.new!(now.year, 1, 1)
+
+      # Use past month to avoid double fallback (day→hour + hour→minute)
+      to =
+        if now.month > 1 do
+          Date.new!(now.year, now.month - 1, 1)
+        else
+          # January: use December of previous year
+          Date.new!(now.year - 1, 12, 1)
+        end
+
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :day,
+          from: from,
+          to: to
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch hourly files (candles_hour_1), not daily files (candles_day_1)
+      # because current year's daily file doesn't exist yet
+      assert length(paths) > 0
+      assert Enum.all?(paths, &String.contains?(&1, "candles_hour_1"))
+      refute Enum.any?(paths, &String.contains?(&1, "candles_day_1"))
+    end
+
+    test "fetches daily file for daily data in past year" do
+      {stub_opts, tracker} = TestFixtures.stub_dukascopy_with_tracking(:fallback_d1_past_year)
+
+      # Use past year dates (2019)
+      opts =
+        Keyword.merge(stub_opts,
+          instrument: "EUR/USD",
+          granularity: :day,
+          from: ~D[2019-01-01],
+          to: ~D[2019-06-30]
+        )
+
+      {:ok, stream} = DataFeed.stream(opts)
+      Stream.run(stream)
+
+      paths = TestFixtures.get_request_paths(tracker)
+
+      # Should fetch daily file, not hourly files
+      assert length(paths) == 1
+      assert Enum.all?(paths, &String.contains?(&1, "candles_day_1"))
+    end
+  end
 end
